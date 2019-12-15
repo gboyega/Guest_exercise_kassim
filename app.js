@@ -1,33 +1,17 @@
-const fs = require('fs');
-const AWS = require('aws-sdk');
-require("dotenv").config();
+const express = require("express");
 
 
-const ID = process.env.ID;
-const SECRET = process.env.SECRET;
-const BUCKET_NAME = process.env.BUCKET_NAME;
+const app = express();
+const bodyParser = require("body-parser");
 
-const s3 = new AWS.S3({
-  accessKeyId: ID,
-  secretAccessKey: SECRET
+const port = process.env.PORT || 4004;
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+
+const routes = require("./routes/uploadRoute");
+routes(app);
+
+app.listen(port, () => {
+  console.log(`server started on port ${port}`);
 });
-
-console.log(s3);
-const uploadFile = fileName => {
-  const fileContent = fs.readFileSync(fileName);
-  
-  const params = {
-    Bucket: BUCKET_NAME,
-    Key: fileName,
-    Body: fileContent
-  };
-  
-  s3.upload(params, function(err, data) {
-    if (err) {
-      throw err;
-    }
-    console.log(`File uploaded successfully. ${data.Location}`);
-  });
-};
-
-uploadFile("images.png");
