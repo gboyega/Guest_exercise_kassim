@@ -1,4 +1,4 @@
-require ('dotenv').config();
+require("dotenv").config();
 const multer = require("multer");
 const AWS = require("aws-sdk");
 const fs = require("fs");
@@ -13,35 +13,49 @@ const s3 = new AWS.S3({
 });
 
 module.exports = app => {
-  app
-    .route("/upload")
-    .get((req, res) => {
-      res.status(200).send(uploads);
-    })
-    .post(upload.single("file"), (req, res) => {
-      if (!req.file) {
-        res.status(415).json({ message: "invalid upload request" });
-      }
-      var file = fs.readFileSync(req.file.path, 'utf8');
-      console.log(file);
-      const params = {
-        Bucket: bucket,
-        Key: `${--req.body.filename || req.file.originalname}`,
-        Body: file,
-        acl: "public-read"
-      };
+  app.route("/viewUploads")
+  .get((req, res) => {
+    res.status(200).send(uploads);
+  });
 
-      s3.upload(params, function(err, data) {
-        if (err) {
-          res.status(500).json({message:"internal server error"})
-          throw err;
-        }
-        var newFile = {
-          "File Name": `${req.body.filename || req.file.filename}`,
-          Link: `${data.Location}`
-        };
-        uploads.push(newFile);
-        res.status(201).send(newFile);
-      });
+  app.route("/uploadFile")
+  .post(upload.single("file"), (req, res) => {
+    if (!req.file) {
+      res.status(415).json({ message: "invalid upload request" });
+    }
+    var file = fs.readFileSync(req.file.path, "utf8");
+    const params = {
+      Bucket: bucket,
+      Key: `${req.body.filename || req.file.originalname}`,
+      Body: file,
+      acl: "public-read"
+    };
+
+    s3.upload(params, function(err, data) {
+      if (err) {
+        res.status(500).json({ message: "internal server error" });
+        throw err;
+      }
+      var newFile = {
+        "File Name": `${req.body.filename || req.file.originalname}`,
+        Link: `${data.Location}`,
+        id: uploads.length + 1
+      };
+      uploads.push(newFile);
+      res.status(201).send(newFile);
     });
+  });
+
+  app.route("/viewUpload/:id")
+  .get((req, res) => {
+    var upload;
+    for (i=0; i<uploads.length; i++){
+      if (uploads[i].id == req.params.id){
+        upload = uploads[i];
+      }
+    };
+    if (upload){
+      res.status(200).send(upload)
+    } else {res.status(404).json({ message:"upload not found" })}
+  })
 };
